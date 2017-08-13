@@ -6,11 +6,13 @@ Implementation of Set for positive integer keys
 Intended to save required memory
 Stores keys in the sparse bit index
 
+```bash
 slot1 [0] -> [uint32 mask]
 slot2 [1] -> [0 1 2 3 ...7][8 9 ... 15] ... [16 .. 31]
                   1         1                          <--- we have two id here: 32 and 40
 .....
 slotX [x] -> [....]
+```
 
 BitmapIntegerSet - compactset based on standard go map
 OABitmapIntegerSet - compactset based on open addressing map, has less memeory overhead than standard go map
