@@ -129,7 +129,7 @@ func (b *BitmapIntegerSet) Add(key KeyType) {
 // --------------------------------------------------------------------------
 // based on linear addressing, with linear probing collision resolution
 // --------------------------------------------------------------------------
-type LinearAddressingBitmapIntegerSet struct {
+type OABitmapIntegerSet struct {
 	loadFactor       float32
 	threshold        int
 	slotCount        int
@@ -152,8 +152,8 @@ func hash(h slotKeyType, tLen int) int {
 	return int(h) & (tLen - 1)
 }
 
-func NewLinearAddressingBitmapIntegerSet() *LinearAddressingBitmapIntegerSet {
-	s := LinearAddressingBitmapIntegerSet{
+func NewOABitmapIntegerSet() *OABitmapIntegerSet {
+	s := OABitmapIntegerSet{
 		loadFactor: default_load_factor,
 		threshold: calc_threshold(initial_length, default_load_factor),
 		slotCount: 0,
@@ -167,7 +167,7 @@ func NewLinearAddressingBitmapIntegerSet() *LinearAddressingBitmapIntegerSet {
 }
 
 // search until we either find the key, or find an empty slot.
-func (s *LinearAddressingBitmapIntegerSet) findSlotByLinearProbing(key slotKeyType) (int, bool) {
+func (s *OABitmapIntegerSet) findSlotByLinearProbing(key slotKeyType) (int, bool) {
 	index := hash(key, s.capacity) // compute hashcode
 
 	for i := 0; i < s.capacity; i++ {
@@ -188,7 +188,7 @@ func (s *LinearAddressingBitmapIntegerSet) findSlotByLinearProbing(key slotKeyTy
 	return -1, false //nothing found, table is full
 }
 
-func (s *LinearAddressingBitmapIntegerSet) ensureCapacity(newCount int) bool {
+func (s *OABitmapIntegerSet) ensureCapacity(newCount int) bool {
 	if newCount > max_length {
 		return false
 	}
@@ -200,7 +200,7 @@ func (s *LinearAddressingBitmapIntegerSet) ensureCapacity(newCount int) bool {
 	return true
 }
 
-func (s *LinearAddressingBitmapIntegerSet) rehash(newCapacity int) {
+func (s *OABitmapIntegerSet) rehash(newCapacity int) {
 	newTable := make([]slotKeyType, newCapacity)
 	newValueTable := make([]valueType, newCapacity)
 
@@ -220,7 +220,7 @@ func (s *LinearAddressingBitmapIntegerSet) rehash(newCapacity int) {
 	s.threshold = calc_threshold(newCapacity, s.loadFactor)
 }
 
-func (s *LinearAddressingBitmapIntegerSet) findSlot(key slotKeyType) (int, bool) {
+func (s *OABitmapIntegerSet) findSlot(key slotKeyType) (int, bool) {
 	if !s.ensureCapacity(s.slotCount + 1) {
 		panic("no more capacity")
 	}
@@ -231,7 +231,7 @@ func (s *LinearAddressingBitmapIntegerSet) findSlot(key slotKeyType) (int, bool)
 	return i, found
 }
 
-func (s *LinearAddressingBitmapIntegerSet) putValue(key slotKeyType, value valueType) {
+func (s *OABitmapIntegerSet) putValue(key slotKeyType, value valueType) {
 	if key == emptyKey {
 		if !s.hasEmptyKey {
 			s.hasEmptyKey = true
@@ -248,7 +248,7 @@ func (s *LinearAddressingBitmapIntegerSet) putValue(key slotKeyType, value value
 	s.values[i] = value
 }
 
-func (s *LinearAddressingBitmapIntegerSet) getValue(key slotKeyType) (value valueType, exist bool) {
+func (s *OABitmapIntegerSet) getValue(key slotKeyType) (value valueType, exist bool) {
 	if key == emptyKey {
 		if s.hasEmptyKey {
 			return s.valueForEmptyKey, true
@@ -265,7 +265,7 @@ func (s *LinearAddressingBitmapIntegerSet) getValue(key slotKeyType) (value valu
 	}
 }
 
-func (s *LinearAddressingBitmapIntegerSet) Contains(key KeyType) bool {
+func (s *OABitmapIntegerSet) Contains(key KeyType) bool {
 	slotIdx, mask := calc(key)
 
 	slotValue, found := s.getValue(slotIdx)
@@ -275,7 +275,7 @@ func (s *LinearAddressingBitmapIntegerSet) Contains(key KeyType) bool {
 	return (slotValue & mask) != 0
 }
 
-func (s *LinearAddressingBitmapIntegerSet) Add(key KeyType) {
+func (s *OABitmapIntegerSet) Add(key KeyType) {
 	slotIdx, mask := calc(key)
 
 	slotValue, found := s.getValue(slotIdx)
@@ -290,11 +290,11 @@ func (s *LinearAddressingBitmapIntegerSet) Add(key KeyType) {
 	}
 }
 
-func (s *LinearAddressingBitmapIntegerSet) Len() int {
+func (s *OABitmapIntegerSet) Len() int {
 	return s.count
 }
 
-func (s *LinearAddressingBitmapIntegerSet) Iterate(iterator CompactIntegerSetIterator) {
+func (s *OABitmapIntegerSet) Iterate(iterator CompactIntegerSetIterator) {
 	if s.hasEmptyKey {
 		iterate(emptyKey, s.valueForEmptyKey, iterator)
 	}
@@ -309,7 +309,7 @@ func (s *LinearAddressingBitmapIntegerSet) Iterate(iterator CompactIntegerSetIte
 }
 
 //clear before return to pool
-func (s *LinearAddressingBitmapIntegerSet) Clear() {
+func (s *OABitmapIntegerSet) Clear() {
 	s.count = 0
 
 	s.hasEmptyKey = false

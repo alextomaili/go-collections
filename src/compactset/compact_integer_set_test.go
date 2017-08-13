@@ -73,16 +73,16 @@ func TestA_BitmapIntegerSet(t *testing.T) {
 	_testA(t, NewBitmapIntegerSet())
 }
 
-func TestA_LinearAddressingBitmapIntegerSet(t *testing.T) {
-	_testA(t, NewLinearAddressingBitmapIntegerSet())
+func TestA_OABitmapIntegerSet(t *testing.T) {
+	_testA(t, NewOABitmapIntegerSet())
 }
 
 func TestB_BitmapIntegerSet(t *testing.T) {
 	_testB(t, NewBitmapIntegerSet())
 }
 
-func TestB_LinearAddressingBitmapIntegerSet(t *testing.T) {
-	_testB(t, NewLinearAddressingBitmapIntegerSet())
+func TestB_OABitmapIntegerSet(t *testing.T) {
+	_testB(t, NewOABitmapIntegerSet())
 }
 
 // -------------------------------------------------------------------------
@@ -132,16 +132,16 @@ func BenchmarkGetKeys_BitmapIntegerSetA(b *testing.B) {
 	_benchmarkGetKeys(b, NewBitmapIntegerSet(), true)
 }
 
-func BenchmarkGetKeys_LinearAddressingBitmapIntegerSetA(b *testing.B) {
-	_benchmarkGetKeys(b, NewLinearAddressingBitmapIntegerSet(), true)
+func BenchmarkGetKeys_OABitmapIntegerSetA(b *testing.B) {
+	_benchmarkGetKeys(b, NewOABitmapIntegerSet(), true)
 }
 
 func BenchmarkGetKeys_BitmapIntegerSetB(b *testing.B) {
 	_benchmarkGetKeys(b, NewBitmapIntegerSet(), false)
 }
 
-func BenchmarkGetKeys_LinearAddressingBitmapIntegerSetB(b *testing.B) {
-	_benchmarkGetKeys(b, NewLinearAddressingBitmapIntegerSet(), false)
+func BenchmarkGetKeys_OABitmapIntegerSetB(b *testing.B) {
+	_benchmarkGetKeys(b, NewOABitmapIntegerSet(), false)
 }
 
 // ------------------------------------------------------------------------
@@ -217,9 +217,9 @@ func TestA_MemoryFor_BitmapIntegerSet(t *testing.T) {
 	holder +=len(hs)
 }
 
-func TestA_MemoryFor_LinearAddressingBitmapIntegerSet(t *testing.T) {
+func TestA_MemoryFor_OABitmapIntegerSet(t *testing.T) {
 	hs := _runSetTest(func() CompactIntegerSet {
-		return NewLinearAddressingBitmapIntegerSet()
+		return NewOABitmapIntegerSet()
 	})
 	holder +=len(hs)
 }
