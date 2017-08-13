@@ -1,0 +1,6 @@
+pkg/*
+bin/*
+*.iml
+.idea
+.idea/*
+*.swp
