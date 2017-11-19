@@ -171,36 +171,6 @@ func BenchmarkCIntKeyMap_GetKeys(b *testing.B) {
 	b.StopTimer()
 }
 
-var BENCHMARK_KEYS_COUNT int = 1000000;
-func TestTimeProf(t *testing.T)  {
-	do := make(chan bool)
-	done := make(chan bool)
-	threadCount := runtime.NumCPU()
-	cnt := BENCHMARK_KEYS_COUNT
-	fmt.Printf("b.N --> %d, numCPU --> %d\n", cnt, runtime.NumCPU())
-
-	tSet := NewCIntKeyMap()
-	for i := 0; i <= cnt; i++ {
-		tSet.Put(i, i)
-	}
-
-	for i := 0; i<threadCount; i++ {
-		go func() {
-			<-do
-			for i := 1; i <= cnt; i++ {
-				v :=  tSet.Get(i)
-				holder += v.(int)
-			}
-			done<-true
-		}()
-	}
-
-	close(do)
-	for i := 0; i < threadCount; i++ {
-		<-done
-	}
-	fmt.Printf("holder -> %d, count -> %d\n", holder, tSet.GetCount());
-}
 
 func BenchmarkRwLock_GetKeys(b *testing.B) {
 	b.StopTimer()
@@ -237,4 +207,71 @@ func BenchmarkRwLock_GetKeys(b *testing.B) {
 		<-done
 	}
 	b.StopTimer()
+}
+
+func BenchmarkSyncMap_GetKeys(b *testing.B) {
+	b.StopTimer()
+	do := make(chan bool)
+	done := make(chan bool)
+	//threadCount := 8
+	threadCount := runtime.NumCPU()
+	cnt := b.N
+	//cnt = BENCHMARK_KEYS_COUNT
+	fmt.Printf("b.N --> %d, numCPU --> %d\n", b.N, runtime.NumCPU())
+
+	tSet := &sync.Map{}
+	for i := 0; i <= cnt; i++ {
+		tSet.Store(i, i)
+	}
+
+	for i := 0; i<threadCount; i++ {
+		go func() {
+			<-do
+			for i := 1; i <= cnt; i++ {
+				v, _ :=  tSet.Load(i)
+				holder += v.(int)
+			}
+			done<-true
+		}()
+	}
+
+	b.StartTimer()
+	close(do)
+	for i := 0; i < threadCount; i++ {
+		<-done
+	}
+	b.StopTimer()
+}
+
+// ---
+
+var BENCHMARK_KEYS_COUNT int = 1000000;
+func TestTimeProf(t *testing.T)  {
+	do := make(chan bool)
+	done := make(chan bool)
+	threadCount := runtime.NumCPU()
+	cnt := BENCHMARK_KEYS_COUNT
+	fmt.Printf("b.N --> %d, numCPU --> %d\n", cnt, runtime.NumCPU())
+
+	tSet := NewCIntKeyMap()
+	for i := 0; i <= cnt; i++ {
+		tSet.Put(i, i)
+	}
+
+	for i := 0; i<threadCount; i++ {
+		go func() {
+			<-do
+			for i := 1; i <= cnt; i++ {
+				v :=  tSet.Get(i)
+				holder += v.(int)
+			}
+			done<-true
+		}()
+	}
+
+	close(do)
+	for i := 0; i < threadCount; i++ {
+		<-done
+	}
+	fmt.Printf("holder -> %d, count -> %d\n", holder, tSet.GetCount());
 }
