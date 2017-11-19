@@ -275,3 +275,63 @@ func TestTimeProf(t *testing.T)  {
 	}
 	fmt.Printf("holder -> %d, count -> %d\n", holder, tSet.GetCount());
 }
+
+func TestSyncMapTimeProf(t *testing.T)  {
+	do := make(chan bool)
+	done := make(chan bool)
+	threadCount := runtime.NumCPU()
+	cnt := BENCHMARK_KEYS_COUNT
+	fmt.Printf("b.N --> %d, numCPU --> %d\n", cnt, runtime.NumCPU())
+
+	tSet := &sync.Map{}
+	for i := 0; i <= cnt; i++ {
+		tSet.Store(i, i)
+	}
+
+	for i := 0; i<threadCount; i++ {
+		go func() {
+			<-do
+			for i := 1; i <= cnt; i++ {
+				v, _ :=  tSet.Load(i)
+				holder += v.(int)
+			}
+			done<-true
+		}()
+	}
+
+	close(do)
+	for i := 0; i < threadCount; i++ {
+		<-done
+	}
+	fmt.Printf("holder -> %d, count -> %d\n", holder, cnt);
+}
+
+func TestStdMapTimeProf(t *testing.T)  {
+	do := make(chan bool)
+	done := make(chan bool)
+	threadCount := runtime.NumCPU()
+	cnt := BENCHMARK_KEYS_COUNT
+	fmt.Printf("b.N --> %d, numCPU --> %d\n", cnt, runtime.NumCPU())
+
+	tSet := make(map[int]interface{}, cnt)
+	for i := 0; i <= cnt; i++ {
+		tSet[i] = i
+	}
+
+	for i := 0; i<threadCount; i++ {
+		go func() {
+			<-do
+			for i := 1; i <= cnt; i++ {
+				v, _ :=  tSet[i]
+				holder += v.(int)
+			}
+			done<-true
+		}()
+	}
+
+	close(do)
+	for i := 0; i < threadCount; i++ {
+		<-done
+	}
+	fmt.Printf("holder -> %d, count -> %d\n", holder, cnt);
+}
