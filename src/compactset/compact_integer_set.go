@@ -46,7 +46,7 @@ type slotKeyType uint16
 
 const emptyKey slotKeyType = 0
 
-type valueType uint32
+type valueType uint64
 
 const emptyValue valueType = 0
 

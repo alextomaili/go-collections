@@ -411,7 +411,7 @@ func VerifyForDoubledValuesCIntKeyMap(m *CIntKeyMap) {
 		if !found {
 			mp[cEntry.intKey] = cEntry.value
 		} else {
-			panic(fmt.Sprint("two value for key fund, key %d, value %d, value %d", cEntry.intKey, d, cEntry.value))
+			panic(fmt.Sprintf("two value for key fund, key %d, value %v, value %v", cEntry.intKey, d, cEntry.value))
 		}
 	}
 }
@@ -435,14 +435,14 @@ func VerifyForDoubledValuesCStrKeyMap(m *CStrKeyMap) {
 		if !found {
 			mp[cEntry.strKey] = cEntry.value
 		} else {
-			panic(fmt.Sprint("two value for key fund, key %s, value %d, value %d", cEntry.strKey, d, cEntry.value))
+			panic(fmt.Sprintf("two value for key fund, key %s, value %v, value %v", cEntry.strKey, d, cEntry.value))
 		}
 	}
 }
 
 
 func _dump(md *mapData)  {
-	fmt.Printf("map_data[loadFactor: %d, threshold: %d, capacity: %d, estimatedCount: %d, len(data) %d]\n",
+	fmt.Printf("map_data[loadFactor: %f, threshold: %d, capacity: %d, estimatedCount: %d, len(data) %d]\n",
 		md.loadFactor, md.threshold, md.capacity, md.estimatedCount, len(md.data))
 }
 
