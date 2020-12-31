@@ -1,7 +1,6 @@
 package asyncfactory
 
 import (
-	"math/rand"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -88,7 +87,7 @@ func TestDoNotReturnSameObject(tst *testing.T) {
 func workloadA(m *tstStructMapWithIntKey, maxKey int) int64 {
 	t := time.Now().UnixNano()
 	for i := 0; i < maxKey; i++ {
-		k := rand.Int63n(int64(maxKey))
+		k := int64(i) //rand.Int63n(int64(maxKey))
 		if v, f := (*m)[k]; f {
 			v.number++
 			t++
@@ -156,18 +155,19 @@ func BenchmarkAsyncFactory(b *testing.B) {
 
 	//factory:
 	factorySpinCount := 1000
-	factoryBufferSize := testThreadCount * 2
+	factoryBufferSize := testThreadCount * 10
 
 	var (
-		tstAllocCounter     uint64
-		tstSyncAllocCounter uint64
+		tstAsyncAllocCounter uint64
+		tstSyncAllocCounter  uint64
 	)
 
 	af := NewAsyncFactory(factoryBufferSize, factorySpinCount, func(async bool) unsafe.Pointer {
 		if !async {
 			atomic.AddUint64(&tstSyncAllocCounter, 1)
+		} else {
+			atomic.AddUint64(&tstAsyncAllocCounter, 1)
 		}
-		atomic.AddUint64(&tstAllocCounter, 1)
 		r := make(tstStructMapWithIntKey, maxMapKeys)
 		return unsafe.Pointer(&r)
 	})
@@ -185,6 +185,10 @@ func BenchmarkAsyncFactory(b *testing.B) {
 			p := af.Alloc()
 			return (*tstStructMapWithIntKey)(p)
 		})
-		b.Logf("passed, allocated: %v, sync_allocations: %v", tstAllocCounter, tstSyncAllocCounter)
+
+		h := atomic.LoadUint64(&af.head)
+		t := atomic.LoadUint64(&af.tail)
+
+		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v", tstAsyncAllocCounter, tstSyncAllocCounter, h, t)
 	})
 }

@@ -94,8 +94,6 @@ func (f *AsyncFactory) Alloc() unsafe.Pointer {
 		if h < t {
 			if atomic.CompareAndSwapUint64(&f.head, h, h+1) {
 				return r
-			} else {
-				continue
 			}
 		}
 
@@ -103,7 +101,13 @@ func (f *AsyncFactory) Alloc() unsafe.Pointer {
 			force++
 			f.force() //force allocation thread
 			runtime.Gosched()
+		} else if force % 10 == 0 {
+			force++
+			runtime.Gosched()
+		} else {
+			force++
 		}
 	}
 	return f.allocator(false)
 }
+
