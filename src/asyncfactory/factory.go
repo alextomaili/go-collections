@@ -20,6 +20,8 @@ type (
 
 		mutex *sync.Mutex
 		cond  *sync.Cond
+
+		d1 int
 	}
 )
 
@@ -38,14 +40,17 @@ func NewAsyncFactory(bufferSize, spinCount int, allocator Allocator) *AsyncFacto
 	f.cond = sync.NewCond(f.mutex)
 
 	for i := uint64(0); i < f.bufferSize; i++ {
-		f.buffer[i] = f.allocator(false)
+		f.buffer[i] = f.allocator(true)
 	}
 	f.tail = f.bufferSize
 
 	go func(f *AsyncFactory) {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
 		for {
 			f.wait()
-			f.allocNext()
+			f.allocNext(true)
 		}
 	}(&f)
 
@@ -66,26 +71,30 @@ func (f *AsyncFactory) wait() {
 	f.mutex.Unlock()
 }
 
-func (f *AsyncFactory) allocNext() bool {
-	allocated := false
-	t := atomic.LoadUint64(&f.tail)
-	h := atomic.LoadUint64(&f.head)
+func (f *AsyncFactory) allocNext(async bool) {
+	for true {
+		t := atomic.LoadUint64(&f.tail)
+		h := atomic.LoadUint64(&f.head)
 
-	for t-h < f.bufferSize {
-		allocated = true
-		f.buffer[f.idx(t)] = f.allocator(true)
-		t = atomic.AddUint64(&f.tail, 1)
-		h = atomic.LoadUint64(&f.head)
+		if t-h == f.bufferSize {
+			f.d1++
+			return
+		}
+
+		for t-h < f.bufferSize {
+			f.buffer[f.idx(t)] = f.allocator(async)
+			t = atomic.AddUint64(&f.tail, 1)
+			h = atomic.LoadUint64(&f.head)
+		}
+
+		runtime.Gosched()
 	}
 
-	return allocated
 }
 
 func (f *AsyncFactory) Alloc() unsafe.Pointer {
 	c := 0
-	force := 0
 	for c < f.spinCount {
-		c++
 
 		h := atomic.LoadUint64(&f.head)
 		t := atomic.LoadUint64(&f.tail)
@@ -97,17 +106,16 @@ func (f *AsyncFactory) Alloc() unsafe.Pointer {
 			}
 		}
 
-		if force < 1 {
-			force++
+		if c == 0 {
+			c++
 			f.force() //force allocation thread
 			runtime.Gosched()
-		} else if force % 10 == 0 {
-			force++
+		} else if c%5 == 0 {
+			c++
 			runtime.Gosched()
 		} else {
-			force++
+			c++
 		}
 	}
 	return f.allocator(false)
 }
-

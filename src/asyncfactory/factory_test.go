@@ -189,6 +189,7 @@ func BenchmarkAsyncFactory(b *testing.B) {
 		h := atomic.LoadUint64(&af.head)
 		t := atomic.LoadUint64(&af.tail)
 
-		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v", tstAsyncAllocCounter, tstSyncAllocCounter, h, t)
+		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v, d1: %v",
+			tstAsyncAllocCounter, tstSyncAllocCounter, h, t, af.d1)
 	})
 }
