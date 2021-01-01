@@ -151,11 +151,11 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 func BenchmarkAsyncFactory(b *testing.B) {
 	//workload:
 	maxMapKeys := 2000
-	testThreadCount := 256
+	testThreadCount := 1024
 
 	//factory:
 	factorySpinCount := 1000
-	factoryBufferSize := testThreadCount * 10
+	factoryBufferSize := testThreadCount * 5
 
 	var (
 		tstAsyncAllocCounter uint64
