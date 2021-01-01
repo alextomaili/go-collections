@@ -1,6 +1,7 @@
 package asyncfactory
 
 import (
+	"github.com/alextomaili/go-collections/src/go_internals"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -149,6 +150,8 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 
 //GODEBUG=gctrace=1
 func BenchmarkAsyncFactory(b *testing.B) {
+	var m = make([]byte, 1)
+
 	//workload:
 	maxMapKeys := 2000
 	testThreadCount := 1024
@@ -163,24 +166,52 @@ func BenchmarkAsyncFactory(b *testing.B) {
 	)
 
 	af := NewAsyncFactory(factoryBufferSize, factorySpinCount, func(async bool) unsafe.Pointer {
-		if !async {
-			atomic.AddUint64(&tstSyncAllocCounter, 1)
-		} else {
+		if async {
 			atomic.AddUint64(&tstAsyncAllocCounter, 1)
+		} else {
+			atomic.AddUint64(&tstSyncAllocCounter, 1)
+		}
+
+		if !async {
+			go_internals.AssignGcAssistBytes(0xFFFFFFFFFFFFFF)
 		}
 		r := make(tstStructMapWithIntKey, maxMapKeys)
 		return unsafe.Pointer(&r)
 	})
 
-	b.Run("_std", func(b *testing.B) {
+	b.Run("std___________", func(b *testing.B) {
 		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
 			r := make(tstStructMapWithIntKey, maxMapKeys)
 			return &r
 		})
-
 	})
 
-	b.Run("async_alloc", func(b *testing.B) {
+	b.Run("std_no_assist_", func(b *testing.B) {
+		var blackHole int64 = 0
+		c := make(chan struct{})
+		for i:=0; i<10; i++ {
+			go func() {
+				for range c {
+					go_internals.AssignGcAssistBytes(0)
+					m = make([]byte, len(m))
+					blackHole += go_internals.GetGcAssistBytes()
+				}
+			}()
+		}
+		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
+			go_internals.AssignGcAssistBytes(0xFFFFFFFFFFFFFF)
+			r := make(tstStructMapWithIntKey, maxMapKeys)
+			select {
+			case c <- struct{}{}:
+			default:
+			}
+			return &r
+		})
+		close(c)
+		b.Logf("blackHole: %v", blackHole)
+	})
+
+	b.Run("async_alloc___", func(b *testing.B) {
 		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
 			p := af.Alloc()
 			return (*tstStructMapWithIntKey)(p)
