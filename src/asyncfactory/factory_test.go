@@ -121,6 +121,7 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 	var c uint64 = 100
 	wg.Add(1)
 	go func() {
+		<-do
 		for i := 0; i < b.N*testThreadCount; i++ {
 			payload := make([]byte, b.N, b.N)
 			atomic.AddUint64(&c, uint64(len(payload)))
@@ -150,7 +151,7 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 
 //GODEBUG=gctrace=1
 func BenchmarkAsyncFactory(b *testing.B) {
-	var m = make([]byte, 1)
+	//var m = make([]byte, 1)
 
 	//workload:
 	maxMapKeys := 2000
@@ -187,28 +188,11 @@ func BenchmarkAsyncFactory(b *testing.B) {
 	})
 
 	b.Run("std_no_assist_", func(b *testing.B) {
-		var blackHole int64 = 0
-		c := make(chan struct{})
-		for i:=0; i<10; i++ {
-			go func() {
-				for range c {
-					go_internals.AssignGcAssistBytes(0)
-					m = make([]byte, len(m))
-					blackHole += go_internals.GetGcAssistBytes()
-				}
-			}()
-		}
 		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
 			go_internals.AssignGcAssistBytes(0xFFFFFFFFFFFFFF)
 			r := make(tstStructMapWithIntKey, maxMapKeys)
-			select {
-			case c <- struct{}{}:
-			default:
-			}
 			return &r
 		})
-		close(c)
-		b.Logf("blackHole: %v", blackHole)
 	})
 
 	b.Run("async_alloc___", func(b *testing.B) {
@@ -217,10 +201,9 @@ func BenchmarkAsyncFactory(b *testing.B) {
 			return (*tstStructMapWithIntKey)(p)
 		})
 
+		b.StopTimer()
 		h := atomic.LoadUint64(&af.head)
 		t := atomic.LoadUint64(&af.tail)
-
-		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v, d1: %v",
-			tstAsyncAllocCounter, tstSyncAllocCounter, h, t, af.d1)
+		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v, d1: %v", tstAsyncAllocCounter, tstSyncAllocCounter, h, t, af.d1)
 	})
 }
