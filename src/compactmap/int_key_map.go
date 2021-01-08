@@ -34,7 +34,7 @@ type (
 		headerSize int
 		flagSize   int
 		data       []byte
-		slotCount  int
+		itemsCount int
 		generation flagType
 	}
 
@@ -82,7 +82,7 @@ func NewIntKeyMap(dataSize int, capacity int) *IntKeyMap {
 
 		dataSize: dataSize,
 
-		slotCount:  0,
+		itemsCount: 0,
 		generation: 1,
 	}
 
@@ -125,7 +125,7 @@ func (s *IntKeyMap) pData(index int) unsafe.Pointer {
 
 func (s *IntKeyMap) Clear() {
 	s.generation++
-	s.slotCount = 0
+	s.itemsCount = 0
 
 	//if wrap around - make new slice and start with gen == 1 again
 	if s.generation <= 0 {
@@ -195,7 +195,7 @@ func (s *IntKeyMap) rehash(newCapacity int) {
 }
 
 func (s *IntKeyMap) findOrInsertSlot(key KeyType) (int, bool) {
-	if !s.ensureCapacity(s.slotCount + 1) {
+	if !s.ensureCapacity(s.itemsCount + 1) {
 		panic("no more capacity")
 	}
 	i, found := s.findSlotByLinearProbing(key)
@@ -212,7 +212,7 @@ func (s *IntKeyMap) Put(key KeyType, value MapValue) {
 
 	index, found := s.findOrInsertSlot(key)
 	if !found {
-		s.slotCount++
+		s.itemsCount++
 		s.setKey(index, key)
 		s.setFlag(index, s.generation)
 	}
@@ -243,7 +243,12 @@ func (s *IntKeyMap) Del(key KeyType) bool {
 	}
 
 	s.setFlag(index, 0)
+	s.itemsCount--
 	return true
+}
+
+func (s *IntKeyMap) Len() int {
+	return s.itemsCount
 }
 
 func (s *IntKeyMap) VisitAll(visitor Visitor) {
