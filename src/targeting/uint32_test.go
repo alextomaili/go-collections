@@ -1,9 +1,8 @@
 package targeting
 
 import (
-	"testing"
 	"math/rand"
-	"fmt"
+	"testing"
 )
 
 func BenchmarkRandomAccessRead(b *testing.B) {
@@ -25,7 +24,7 @@ func BenchmarkRandomAccessRead(b *testing.B) {
 	}
 	b.StopTimer()
 
-	fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
+	//fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
 }
 
 func BenchmarkRandomAccessRead64(b *testing.B) {
@@ -47,5 +46,5 @@ func BenchmarkRandomAccessRead64(b *testing.B) {
 	}
 	b.StopTimer()
 
-	fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
+	//fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
 }

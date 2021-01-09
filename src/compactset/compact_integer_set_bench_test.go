@@ -1,9 +1,8 @@
 package compactset
 
 import (
-	"testing"
 	"math/rand"
-	"fmt"
+	"testing"
 )
 
 func BenchmarkRandomAccessReadOABitmapIntegerSet(b *testing.B) {
@@ -25,7 +24,7 @@ func BenchmarkRandomAccessReadOABitmapIntegerSet(b *testing.B) {
 	}
 	b.StopTimer()
 
-	fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
+	//fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
 }
 
 func BenchmarkRandomAccessReadBitmapIntegerSet(b *testing.B) {
@@ -47,7 +46,7 @@ func BenchmarkRandomAccessReadBitmapIntegerSet(b *testing.B) {
 	}
 	b.StopTimer()
 
-	fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
+	//fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
 }
 
 func BenchmarkRandomAccessReadBitmapIntegerSet64(b *testing.B) {
@@ -69,5 +68,5 @@ func BenchmarkRandomAccessReadBitmapIntegerSet64(b *testing.B) {
 	}
 	b.StopTimer()
 
-	fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
+	//fmt.Printf("b.N: %d, hit count: %d\n", b.N, cnt)
 }
