@@ -88,7 +88,7 @@ func TestDoNotReturnSameObject(tst *testing.T) {
 func workloadA(m *tstStructMapWithIntKey, maxKey int) int64 {
 	t := time.Now().UnixNano()
 	for i := 0; i < maxKey; i++ {
-		k := int64(i) //rand.Int63n(int64(maxKey))
+		k := int64(t % int64(maxKey)) //rand.Int63n(int64(maxKey))
 		if v, f := (*m)[k]; f {
 			v.number++
 			t++

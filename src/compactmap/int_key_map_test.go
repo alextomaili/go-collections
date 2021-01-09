@@ -22,6 +22,10 @@ type (
 	}
 )
 
+var (
+	emptyTstStructA = &tstStructA{}
+)
+
 func (d *tstStructA) Size() int {
 	return int(
 		0 +
@@ -71,8 +75,7 @@ func TestSimplePutAndThenGet(t *testing.T) {
 		},
 	}
 
-	s := &tstStructA{}
-	m := NewIntKeyMap(s.Size(), 10)
+	m := NewIntKeyMap(emptyTstStructA.Size(), 10)
 
 	for i, _ := range data {
 		m.Put(data[i].key, &data[i].value)
@@ -105,8 +108,7 @@ func TestPutGetDelete(t *testing.T) {
 		})
 	}
 
-	s := &tstStructA{}
-	m := NewIntKeyMap(s.Size(), 10)
+	m := NewIntKeyMap(emptyTstStructA.Size(), 10)
 
 	for i, _ := range data {
 		m.Put(data[i].key, &data[i].value)
@@ -166,8 +168,7 @@ func TestPutGetClear(t *testing.T) {
 		})
 	}
 
-	s := &tstStructA{}
-	m := NewIntKeyMap(s.Size(), 10)
+	m := NewIntKeyMap(emptyTstStructA.Size(), 10)
 
 	for i, _ := range data {
 		m.Put(data[i].key, &data[i].value)
@@ -220,8 +221,7 @@ func TestPutAndThenGetWithRehash(t *testing.T) {
 		})
 	}
 
-	s := &tstStructA{}
-	m := NewIntKeyMap(s.Size(), 10)
+	m := NewIntKeyMap(emptyTstStructA.Size(), 10)
 
 	for i, _ := range data {
 		m.Put(data[i].key, &data[i].value)
