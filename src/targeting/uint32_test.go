@@ -120,7 +120,7 @@ func BenchmarkRandomAccessReadOABitmapIntegerSet64(b *testing.B) {
 	b.StopTimer()
 
 	set := compactset.NewOABitmapIntegerSet()
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < 64; i++ {
 		idx := uint32(rand.Int31n(64))
 		set.Add(compactset.KeyType(idx))
 	}
