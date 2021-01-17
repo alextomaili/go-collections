@@ -1,15 +1,15 @@
 package compactset
 
 /*
-    Implementation of Set for positive integer keys
-    Intended to save required memory
-    Stores keys in the sparse bit index
+   Implementation of Set for positive integer keys
+   Intended to save required memory
+   Stores keys in the sparse bit index
 
-    slot1 [0] -> [uint32 mask]
-    slot2 [1] -> [0 1 2 3 ...7][8 9 ... 15] ... [16 .. 31]
-                      1         1                          <--- we have two id here: 32 and 40
-    .....
-    slotX [x] -> [....]
+   slot1 [0] -> [uint32 mask]
+   slot2 [1] -> [0 1 2 3 ...7][8 9 ... 15] ... [16 .. 31]
+                     1         1                          <--- we have two id here: 32 and 40
+   .....
+   slotX [x] -> [....]
 
 */
 
@@ -17,10 +17,10 @@ const (
 	//hash table to store slots ---------------------
 	//we should protect system against to large array's allocation
 	//linear addressing uses arrays, we must limit capacity
-	initial_power uint = 3
-	max_power uint = 30
-	initial_length int = int(1 << initial_power)
-	max_length int = int(1 << max_power)
+	initial_power  uint = 3
+	max_power      uint = 30
+	initial_length int  = int(1 << initial_power)
+	max_length     int  = int(1 << max_power)
 
 	//good value from java framework
 	default_load_factor = float32(0.75)
@@ -29,10 +29,10 @@ const (
 	//compact set -----------------------------------
 	//set can holds numbers from 0 to 2 097 120
 	//it uses 2 bytes for holds slots and 4 bytes for hold bit mask
-	maxSlotNumber uint16 = 0xFFFF   //65 535 * 32 = 2 097 120
-	dividerPower uint32 = 5        //1 << 5 = 32
-	maskSize uint32 = 1 << dividerPower//32
-	maxKey uint32 = uint32(maxSlotNumber) << dividerPower
+	maxSlotNumber uint16 = 0xFFFF            //65 535 * 32 = 2 097 120
+	dividerPower  uint32 = 5                 //1 << 5 = 32
+	maskSize      uint32 = 1 << dividerPower //32
+	maxKey        uint32 = uint32(maxSlotNumber) << dividerPower
 
 	//used to calculate hash from key, by the way key ^ (key >> hashShift)
 	//intended to involve high and low bits to the hash calculation
@@ -52,23 +52,23 @@ const emptyValue valueType = 0
 
 func calc(key KeyType) (slotIdx slotKeyType, mask valueType) {
 	slotIdx = slotKeyType(key >> dividerPower)        //like (key / 32)
-	bitNumber := key - KeyType(slotIdx) << dividerPower //like (key % 32)
+	bitNumber := key - KeyType(slotIdx)<<dividerPower //like (key % 32)
 	mask = valueType(1 << bitNumber)
 	return
 }
 
 func iterate(slotIdx slotKeyType, slotValue valueType, iterator CompactIntegerSetIterator) {
-	x := valueType(slotIdx) << dividerPower
+	x := KeyType(slotIdx) << dividerPower
 	for i := uint32(0); i < maskSize; i++ {
 		mask := valueType(1 << i)
 		if (slotValue & mask) != 0 {
-			v := x + valueType(i)
+			v := x + KeyType(i)
 			iterator(v)
 		}
 	}
 }
 
-type CompactIntegerSetIterator func(value valueType)
+type CompactIntegerSetIterator func(value KeyType)
 type CompactIntegerSet interface {
 	Add(key KeyType)
 	Contains(key KeyType) bool
@@ -106,7 +106,7 @@ func (b *BitmapIntegerSet) Contains(key KeyType) bool {
 
 	slotValue, found := b.slots[slotIdx]
 	if !found {
-		return false;
+		return false
 	}
 	return (slotValue & mask) != 0
 }
@@ -142,7 +142,7 @@ type OABitmapIntegerSet struct {
 }
 
 func calc_threshold(capacity int, load_factor float32) int {
-	return int(float32(capacity) * load_factor);
+	return int(float32(capacity) * load_factor)
 }
 
 func hash(h slotKeyType, tLen int) int {
@@ -154,15 +154,15 @@ func hash(h slotKeyType, tLen int) int {
 
 func NewOABitmapIntegerSet() *OABitmapIntegerSet {
 	s := OABitmapIntegerSet{
-		loadFactor: default_load_factor,
-		threshold: calc_threshold(initial_length, default_load_factor),
-		slotCount: 0,
-		count: 0,
-		hasEmptyKey: false,
+		loadFactor:       default_load_factor,
+		threshold:        calc_threshold(initial_length, default_load_factor),
+		slotCount:        0,
+		count:            0,
+		hasEmptyKey:      false,
 		valueForEmptyKey: 0,
-		capacity: initial_length,
-		keys: make([]slotKeyType, initial_length),
-		values: make([]valueType, initial_length)}
+		capacity:         initial_length,
+		keys:             make([]slotKeyType, initial_length),
+		values:           make([]valueType, initial_length)}
 	return &s
 }
 
@@ -171,7 +171,7 @@ func (s *OABitmapIntegerSet) findSlotByLinearProbing(key slotKeyType) (int, bool
 	index := hash(key, s.capacity) // compute hashcode
 
 	for i := 0; i < s.capacity; i++ {
-		k := s.keys[index];
+		k := s.keys[index]
 		if k == emptyKey {
 			return index, false
 		}
@@ -196,7 +196,7 @@ func (s *OABitmapIntegerSet) ensureCapacity(newCount int) bool {
 		return true //already have enough capacity
 	}
 	//enlarge size
-	s.rehash(s.capacity << 1);
+	s.rehash(s.capacity << 1)
 	return true
 }
 
@@ -290,7 +290,7 @@ func (s *OABitmapIntegerSet) Contains(key KeyType) bool {
 
 	slotValue, found := s.getValue(slotIdx)
 	if !found {
-		return false;
+		return false
 	}
 	return (slotValue & mask) != 0
 }
@@ -304,7 +304,7 @@ func (s *OABitmapIntegerSet) Add(key KeyType) {
 		s.count++
 	} else {
 		if (slotValue & mask) == 0 {
-			s.putValue(slotIdx, slotValue | mask)
+			s.putValue(slotIdx, slotValue|mask)
 			s.count++
 		}
 	}
@@ -340,4 +340,82 @@ func (s *OABitmapIntegerSet) Clear() {
 		s.keys[i] = emptyKey
 		s.values[i] = emptyValue
 	}
+}
+
+// --------------------------------------------------------------------------
+// based on linear addressing, with linear probing collision resolution
+// optimized to store keys within range 0..63
+// --------------------------------------------------------------------------
+type OaOptBitmapIntegerSet struct {
+	smallSet uint64
+	longSet  *OABitmapIntegerSet
+	count    int
+}
+
+func NewOaOptBitmapIntegerSet() *OaOptBitmapIntegerSet {
+	return &OaOptBitmapIntegerSet{}
+}
+
+func (s *OaOptBitmapIntegerSet) Contains(key KeyType) bool {
+	if s.longSet != nil {
+		return s.longSet.Contains(key)
+	}
+
+	if key > 63 {
+		return false
+	}
+
+	return (s.smallSet & uint64(1<<key)) != 0
+}
+
+func (s *OaOptBitmapIntegerSet) Add(key KeyType) {
+	if s.longSet != nil {
+		s.longSet.Add(key)
+		return
+	}
+
+	if key < 64 {
+		s.smallSet = s.smallSet | uint64(1<<key)
+		s.count++
+		return
+	}
+
+	s.longSet = NewOABitmapIntegerSet()
+	for i := 0; i < 64; i++ {
+		if (s.smallSet & uint64(1<<i)) != 0 {
+			s.longSet.Add(KeyType(i))
+		}
+	}
+	s.longSet.Add(key)
+
+	s.smallSet = 0
+	s.count = 0
+}
+
+func (s *OaOptBitmapIntegerSet) Len() int {
+	if s.longSet != nil {
+		return s.longSet.Len()
+	}
+	return s.Len()
+}
+
+func (s *OaOptBitmapIntegerSet) Iterate(iterator CompactIntegerSetIterator) {
+	if s.longSet != nil {
+		s.longSet.Iterate(iterator)
+		return
+	}
+
+	for i := 0; i < 64; i++ {
+		if (s.smallSet & uint64(1<<i)) != 0 {
+			iterator(KeyType(i))
+		}
+	}
+}
+
+func (s *OaOptBitmapIntegerSet) Clear() {
+	if s.longSet != nil {
+		s.longSet.Clear()
+	}
+	s.smallSet = 0
+	s.count = 0
 }

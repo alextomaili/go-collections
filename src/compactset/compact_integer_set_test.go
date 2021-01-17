@@ -1,19 +1,19 @@
 package compactset
 
 import (
-	"testing"
 	"fmt"
 	"runtime"
+	"testing"
 )
 
 const (
 	first_key_to_test = 0
-	keys_to_test = 80000
+	keys_to_test      = 80000
 
 	first_key_to_bench = 0
-	keys_to_bench = 80000
+	keys_to_bench      = 80000
 
-	mem_bench_sets_count int = 1000
+	mem_bench_sets_count  int = 1000
 	mem_bench_steps_count int = 16
 )
 
@@ -21,15 +21,15 @@ const (
 // functional tests
 // -------------------------------------------------------------------------
 
-func verify(t *testing.T, s CompactIntegerSet, value KeyType)  {
+func verify(t *testing.T, s CompactIntegerSet, value KeyType) {
 	s.Add(value)
 	if !s.Contains(value) {
 		t.Errorf("Set should contains %d", value)
 	}
 }
 
-func _testA(t *testing.T, s CompactIntegerSet)  {
-	values := []uint32 {0, 17, 63, 64, 12234, 65536}
+func _testA(t *testing.T, s CompactIntegerSet) {
+	values := []uint32{0, 17, 63, 64, 12234, 65536}
 
 	fmt.Printf("verify: \n")
 	for _, i := range values {
@@ -38,29 +38,29 @@ func _testA(t *testing.T, s CompactIntegerSet)  {
 	}
 
 	fmt.Printf("iterate: \n")
-	s.Iterate(func(value valueType) {fmt.Printf("iterated: %d\n", value)})
+	s.Iterate(func(value KeyType) { fmt.Printf("iterated: %d\n", value) })
 }
 
-func _testB(t *testing.T, s CompactIntegerSet)  {
+func _testB(t *testing.T, s CompactIntegerSet) {
 	startKey := first_key_to_test
 	maxKey := keys_to_test
 
-	for i := startKey; i<=maxKey; i++ {
-		if i % 2 == 0 {
+	for i := startKey; i <= maxKey; i++ {
+		if i%2 == 0 {
 			s.Add(KeyType(i))
 		}
 	}
 
-	for i := startKey; i<=maxKey; i++ {
-		if i % 2 == 0 {
+	for i := startKey; i <= maxKey; i++ {
+		if i%2 == 0 {
 			if !s.Contains(KeyType(i)) {
 				t.Errorf("Set must contain %d", i)
 			}
 		}
 	}
 
-	for i := startKey; i<=maxKey; i++ {
-		if i % 2 != 0 {
+	for i := startKey; i <= maxKey; i++ {
+		if i%2 != 0 {
 			if s.Contains(KeyType(i)) {
 				t.Errorf("Set mustn't contain %d", i)
 			}
@@ -68,13 +68,16 @@ func _testB(t *testing.T, s CompactIntegerSet)  {
 	}
 }
 
-
 func TestA_BitmapIntegerSet(t *testing.T) {
 	_testA(t, NewBitmapIntegerSet())
 }
 
 func TestA_OABitmapIntegerSet(t *testing.T) {
 	_testA(t, NewOABitmapIntegerSet())
+}
+
+func TestA_OaOptBitmapIntegerSet(t *testing.T) {
+	_testA(t, NewOaOptBitmapIntegerSet())
 }
 
 func TestB_BitmapIntegerSet(t *testing.T) {
@@ -85,10 +88,15 @@ func TestB_OABitmapIntegerSet(t *testing.T) {
 	_testB(t, NewOABitmapIntegerSet())
 }
 
+func TestB_OaOptBitmapIntegerSet(t *testing.T) {
+	_testB(t, NewOaOptBitmapIntegerSet())
+}
+
 // -------------------------------------------------------------------------
 // benchmarks
 // -------------------------------------------------------------------------
 var holder int = 0
+
 func _benchmarkGetKeys(b *testing.B, s CompactIntegerSet, evenOnly bool) {
 	b.StopTimer()
 
@@ -96,8 +104,8 @@ func _benchmarkGetKeys(b *testing.B, s CompactIntegerSet, evenOnly bool) {
 	startKey := first_key_to_bench
 	maxKey := keys_to_bench
 
-	for i := startKey; i<=maxKey; i++ {
-		if i % 2 == 0 || !evenOnly {
+	for i := startKey; i <= maxKey; i++ {
+		if i%2 == 0 || !evenOnly {
 			s.Add(KeyType(i))
 		}
 	}
@@ -105,8 +113,8 @@ func _benchmarkGetKeys(b *testing.B, s CompactIntegerSet, evenOnly bool) {
 	for i := 0; i < b.N; i++ {
 
 		b.StartTimer()
-		for i := startKey; i<=maxKey; i++ {
-			if i % 2 == 0 || !evenOnly {
+		for i := startKey; i <= maxKey; i++ {
+			if i%2 == 0 || !evenOnly {
 				if !s.Contains(KeyType(i)) {
 					panic(fmt.Errorf("Set must contain %d", i))
 				}
@@ -116,7 +124,7 @@ func _benchmarkGetKeys(b *testing.B, s CompactIntegerSet, evenOnly bool) {
 
 		if evenOnly {
 			for i := startKey; i <= maxKey; i++ {
-				if i % 2 != 0 {
+				if i%2 != 0 {
 					if s.Contains(KeyType(i)) {
 						panic(fmt.Errorf("Set mustn't contain %d", i))
 					}
@@ -154,14 +162,14 @@ func _worm_up() {
 
 	for i := 0; i < 10; i++ {
 		runtime.GC()
-		runtime.ReadMemStats(&stats1);
+		runtime.ReadMemStats(&stats1)
 		runtime.GC()
-		runtime.ReadMemStats(&stats2);
+		runtime.ReadMemStats(&stats2)
 		runtime.GC()
-		runtime.ReadMemStats(&stats3);
+		runtime.ReadMemStats(&stats3)
 	}
-	fmt.Printf("bytes %d %d\n", stats2.HeapAlloc - stats1.HeapAlloc, stats2.Alloc - stats1.Alloc);
-	fmt.Printf("bytes %d %d\n", stats3.HeapAlloc - stats2.HeapAlloc, stats3.Alloc - stats2.Alloc);
+	fmt.Printf("bytes %d %d\n", stats2.HeapAlloc-stats1.HeapAlloc, stats2.Alloc-stats1.Alloc)
+	fmt.Printf("bytes %d %d\n", stats3.HeapAlloc-stats2.HeapAlloc, stats3.Alloc-stats2.Alloc)
 }
 
 func _alloc() uint64 {
@@ -171,12 +179,11 @@ func _alloc() uint64 {
 	return stats.Alloc
 }
 
-
-func _runSetTest(factory func() CompactIntegerSet) []CompactIntegerSet  {
+func _runSetTest(factory func() CompactIntegerSet) []CompactIntegerSet {
 	_worm_up()
 	n := mem_bench_sets_count
 
-	hs := make([]CompactIntegerSet, 0, int(16 * 8 * n))
+	hs := make([]CompactIntegerSet, 0, int(16*8*n))
 
 	before := _alloc()
 	for i := 0; i < n; i++ {
@@ -184,8 +191,8 @@ func _runSetTest(factory func() CompactIntegerSet) []CompactIntegerSet  {
 		hs = append(hs, h)
 	}
 	after := _alloc()
-	emptyPerMap := float64(after - before) / float64(n)
-	fmt.Printf("Bytes used for %d empty maps: %d, bytes/map %.1f\n", n, after - before, emptyPerMap)
+	emptyPerMap := float64(after-before) / float64(n)
+	fmt.Printf("Bytes used for %d empty maps: %d, bytes/map %.1f\n", n, after-before, emptyPerMap)
 
 	k := 1
 	cnt := 1
@@ -200,9 +207,9 @@ func _runSetTest(factory func() CompactIntegerSet) []CompactIntegerSet  {
 			hs = append(hs, h)
 		}
 		after = _alloc()
-		fullPerMap := float64(after - before) / float64(n)
-		fmt.Printf("Bytes used for %d maps with %d entries: %d, bytes/map %.1f\n", n, k, after - before, fullPerMap)
-		fmt.Printf("Bytes per entry %.1f\n", (fullPerMap - emptyPerMap) / float64(k))
+		fullPerMap := float64(after-before) / float64(n)
+		fmt.Printf("Bytes used for %d maps with %d entries: %d, bytes/map %.1f\n", n, k, after-before, fullPerMap)
+		fmt.Printf("Bytes per entry %.1f\n", (fullPerMap-emptyPerMap)/float64(k))
 		k *= 2
 	}
 	fmt.Println("TOTAL ENTRIES:", cnt)
@@ -214,12 +221,12 @@ func TestA_MemoryFor_BitmapIntegerSet(t *testing.T) {
 	hs := _runSetTest(func() CompactIntegerSet {
 		return NewBitmapIntegerSet()
 	})
-	holder +=len(hs)
+	holder += len(hs)
 }
 
 func TestA_MemoryFor_OABitmapIntegerSet(t *testing.T) {
 	hs := _runSetTest(func() CompactIntegerSet {
 		return NewOABitmapIntegerSet()
 	})
-	holder +=len(hs)
+	holder += len(hs)
 }
