@@ -100,7 +100,7 @@ func test(p tstPool, testThreadCount int, testIterationCount int) string {
 
 func TestDoNotUseSameObject(t *testing.T) {
 	testThreadCount := 1024
-	testIterationCount := 1024 * 100
+	testIterationCount := 1024 * 10
 
 	testPoolSize := 1024
 	p := NewFixedSizeRingPool(testPoolSize)

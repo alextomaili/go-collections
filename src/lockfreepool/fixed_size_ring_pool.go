@@ -6,17 +6,22 @@ import (
 	"unsafe"
 )
 
+const (
+	versionMask int64 = 0xFFFFFFFF
+	lockedMask  int64 = 0x0100000000
+	hasDataMask int64 = 0x0200000000
+)
+
 type (
-	ifaceWords struct {
-		typ  unsafe.Pointer
-		data unsafe.Pointer
+	slot struct {
+		typ   unsafe.Pointer
+		data  unsafe.Pointer
+		state int64
 	}
 
 	FixedSizeRingPool struct {
-		size   int64
-		buffer []ifaceWords
-
-		//produceA int64
+		size    int64
+		buffer  []slot
 		produce int64
 		consume int64
 	}
@@ -25,9 +30,9 @@ type (
 func NewFixedSizeRingPool(size int) *FixedSizeRingPool {
 	p := &FixedSizeRingPool{
 		size:    int64(size),
-		buffer:  make([]ifaceWords, size, size),
-		produce: 0,
-		consume: 0,
+		buffer:  make([]slot, size, size),
+		produce: -1,
+		consume: -1,
 	}
 	return p
 }
@@ -37,63 +42,90 @@ func (f *FixedSizeRingPool) idx(i int64) int64 {
 }
 
 func (f *FixedSizeRingPool) Put(v interface{}) bool {
-	var c, p int64
+	var ptr, attempts, prevState, newState, idx int64
 
-	c = atomic.LoadInt64(&f.consume)
-	p = atomic.LoadInt64(&f.produce)
+	attempts = 0
+	for true {
+		if attempts >= f.size {
+			return false
+		}
+		attempts++
 
-	if p < c {
-		panic("FixedSizeRingPool.Put() panic: p < c")
-	} else if p-c > f.size {
-		panic("FixedSizeRingPool.Put() panic: p-c > f.size")
-	} else if p-c == f.size {
-		return false
+		ptr = atomic.LoadInt64(&f.produce)
+		if !atomic.CompareAndSwapInt64(&f.produce, ptr, ptr+1) {
+			continue
+		}
+		ptr = ptr + 1
+
+		idx = f.idx(ptr)
+		prevState = atomic.LoadInt64(&f.buffer[idx].state)
+
+		if prevState&hasDataMask > 0 || prevState&lockedMask > 0 {
+			continue
+		}
+
+		newState = ((prevState + 1) & versionMask) | lockedMask
+		if !atomic.CompareAndSwapInt64(&f.buffer[idx].state, prevState, newState) {
+			continue
+		}
+		prevState = newState
+
+		vp := (*slot)(unsafe.Pointer(&v))
+		f.buffer[idx].typ = vp.typ
+		f.buffer[idx].data = vp.data
+
+		newState = ((prevState + 1) & versionMask) | hasDataMask & ^lockedMask
+		if !atomic.CompareAndSwapInt64(&f.buffer[idx].state, prevState, newState) {
+			panic("uups, this idx must be owned by me")
+		}
+
+		break
 	}
-
-	idx := f.idx(p)
-	vp := (*ifaceWords)(unsafe.Pointer(&v))
-	atomic.StorePointer(&f.buffer[idx].typ, vp.typ)
-	atomic.StorePointer(&f.buffer[idx].data, vp.data)
-	if vp.typ == nil || vp.data == nil {
-		panic(fmt.Sprintf("FixedSizeRingPool.Put() panic: vp.typ == nil || vp.data == nil { c: %v, p: %v, vp.typ: %v, vp.data: %v}",
-			c, p, vp.typ, vp.data))
-	}
-
-	if atomic.CompareAndSwapInt64(&f.produce, p, p+1) {
-		return true
-	}
-	return false
+	return true
 }
 
 func (f *FixedSizeRingPool) Get() (v interface{}) {
-	var c, p int64
+	var ptr, attempts, prevState, newState, idx int64
 
+	attempts = 0
 	for true {
-		c = atomic.LoadInt64(&f.consume)
-		p = atomic.LoadInt64(&f.produce)
+		if attempts >= f.size {
+			return
+		}
+		attempts++
 
-		if c == p {
-			return nil
-		} else if c > p {
-			panic(fmt.Sprintf("FixedSizeRingPool.Get() panic: c > p { c: %v, p: %v }", c, p))
+		ptr = atomic.LoadInt64(&f.consume)
+		if !atomic.CompareAndSwapInt64(&f.consume, ptr, ptr+1) {
+			continue
+		}
+		ptr = ptr + 1
+
+		idx = f.idx(ptr)
+		prevState = atomic.LoadInt64(&f.buffer[idx].state)
+
+		if prevState&hasDataMask == 0 || prevState&lockedMask > 0 {
+			continue
 		}
 
-		if atomic.CompareAndSwapInt64(&f.consume, c, c+1) {
-			break
+		newState = ((prevState + 1) & versionMask) | lockedMask
+		if !atomic.CompareAndSwapInt64(&f.buffer[idx].state, prevState, newState) {
+			continue
 		}
-	}
+		prevState = newState
 
-	idx := f.idx(c)
-	vp := (*ifaceWords)(unsafe.Pointer(&v))
-	vp.typ = atomic.LoadPointer(&f.buffer[idx].typ)
-	vp.data = atomic.LoadPointer(&f.buffer[idx].data)
-	atomic.StorePointer(&f.buffer[idx].typ, nil)
-	atomic.StorePointer(&f.buffer[idx].data, nil)
-	if vp.typ == nil || vp.data == nil {
-		panic(fmt.Sprintf("FixedSizeRingPool.Get() panic: vp.typ == nil || vp.data == nil { c: %v, p: %v, vp.typ: %v, vp.data: %v}",
-			c, p, vp.typ, vp.data))
-	}
+		vp := (*slot)(unsafe.Pointer(&v))
+		vp.typ = f.buffer[idx].typ
+		f.buffer[idx].typ = nil
+		vp.data = f.buffer[idx].data
+		f.buffer[idx].data = nil
 
+		newState = ((prevState + 1) & versionMask) & ^hasDataMask & ^lockedMask
+		if !atomic.CompareAndSwapInt64(&f.buffer[idx].state, prevState, newState) {
+			panic("uups, this idx must be owned by me")
+		}
+
+		break
+	}
 	return
 }
 
