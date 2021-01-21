@@ -85,7 +85,7 @@ func (f *FixedSizeRingPool) Put(v interface{}) bool {
 }
 
 func (f *FixedSizeRingPool) Get() (v interface{}) {
-	var ptr, attempts, prevState, newState, idx int64
+	var ptr, prodPtr, attempts, prevState, newState, idx int64
 
 	attempts = 0
 	for true {
@@ -94,7 +94,13 @@ func (f *FixedSizeRingPool) Get() (v interface{}) {
 		}
 		attempts++
 
+		prodPtr = atomic.LoadInt64(&f.produce)
 		ptr = atomic.LoadInt64(&f.consume)
+
+		if ptr >= prodPtr {
+			return
+		}
+
 		if !atomic.CompareAndSwapInt64(&f.consume, ptr, ptr+1) {
 			continue
 		}

@@ -23,6 +23,12 @@ type (
 	stdPool struct {
 		sync.Pool
 	}
+
+	syncPool struct {
+		lock   sync.Mutex
+		buffer []interface{}
+		top    int
+	}
 )
 
 func (t *tstS) use(p tstPool) {
@@ -48,6 +54,41 @@ func (p *stdPool) Get() interface{} {
 
 func (p *stdPool) State() string {
 	return "std-pool"
+}
+
+func newSyncPool(size int) *syncPool {
+	return &syncPool{
+		lock:   sync.Mutex{},
+		buffer: make([]interface{}, size, size),
+		top:    0,
+	}
+}
+
+func (p *syncPool) Put(v interface{}) bool {
+	r := false
+	p.lock.Lock()
+	if p.top < len(p.buffer)-1 {
+		p.buffer[p.top] = v
+		p.top++
+		r = true
+	}
+	p.lock.Unlock()
+	return r
+}
+
+func (p *syncPool) Get() (v interface{}) {
+	p.lock.Lock()
+	i := p.top - 1
+	if i >= 0 {
+		v = p.buffer[i]
+		p.top--
+	}
+	p.lock.Unlock()
+	return
+}
+
+func (p *syncPool) State() string {
+	return "sync-pool"
 }
 
 func test(p tstPool, testThreadCount int, testIterationCount int) string {
@@ -119,7 +160,7 @@ func BenchmarkWithDoNotUseSameObject(b *testing.B) {
 
 	testPoolSize := 1024
 	p := NewFixedSizeRingPool(testPoolSize)
-
+	syncP := newSyncPool(testPoolSize)
 	stdP := &stdPool{}
 
 	b.Run("std-pool", func(b *testing.B) {
@@ -128,6 +169,16 @@ func BenchmarkWithDoNotUseSameObject(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			msg = test(stdP, testThreadCount, testIterationCount)
+		}
+		//log.Println(msg)
+	})
+
+	b.Run("sync-pool", func(b *testing.B) {
+		b.StartTimer()
+		b.ReportAllocs()
+
+		for i := 0; i < b.N; i++ {
+			msg = test(syncP, testThreadCount, testIterationCount)
 		}
 		//log.Println(msg)
 	})
