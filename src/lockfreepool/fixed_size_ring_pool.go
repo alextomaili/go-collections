@@ -20,19 +20,21 @@ type (
 	}
 
 	FixedSizeRingPool struct {
-		size    int64
-		buffer  []slot
-		produce int64
-		consume int64
+		size      int64
+		buffer    []slot
+		produce   int64
+		consume   int64
+		available int64
 	}
 )
 
 func NewFixedSizeRingPool(size int) *FixedSizeRingPool {
 	p := &FixedSizeRingPool{
-		size:    int64(size),
-		buffer:  make([]slot, size, size),
-		produce: -1,
-		consume: -1,
+		size:      int64(size),
+		buffer:    make([]slot, size, size),
+		produce:   -1,
+		consume:   -1,
+		available: 0,
 	}
 	return p
 }
@@ -42,11 +44,15 @@ func (f *FixedSizeRingPool) idx(i int64) int64 {
 }
 
 func (f *FixedSizeRingPool) Put(v interface{}) bool {
-	var ptr, attempts, prevState, newState, idx int64
+	var ptr, attempts, maxAttepts, prevState, newState, idx int64
 
+	maxAttepts = f.size - atomic.LoadInt64(&f.available)
+	if maxAttepts <= 0 {
+		maxAttepts = 32
+	}
 	attempts = 0
 	for true {
-		if attempts >= f.size {
+		if attempts >= maxAttepts {
 			return false
 		}
 		attempts++
@@ -81,26 +87,30 @@ func (f *FixedSizeRingPool) Put(v interface{}) bool {
 
 		break
 	}
+
+	atomic.AddInt64(&f.available, 1)
 	return true
 }
 
 func (f *FixedSizeRingPool) Get() (v interface{}) {
-	var ptr, prodPtr, attempts, prevState, newState, idx int64
+	var ptr, prodPtr, attempts, maxAttepts, prevState, newState, idx int64
 
+	maxAttepts = atomic.LoadInt64(&f.available)
+	if maxAttepts <= 0 {
+		maxAttepts = 32
+	}
 	attempts = 0
 	for true {
-		if attempts >= f.size {
+		if attempts >= maxAttepts {
 			return
 		}
 		attempts++
 
 		prodPtr = atomic.LoadInt64(&f.produce)
 		ptr = atomic.LoadInt64(&f.consume)
-
 		if ptr >= prodPtr {
 			return
 		}
-
 		if !atomic.CompareAndSwapInt64(&f.consume, ptr, ptr+1) {
 			continue
 		}
@@ -132,6 +142,8 @@ func (f *FixedSizeRingPool) Get() (v interface{}) {
 
 		break
 	}
+
+	atomic.AddInt64(&f.available, -1)
 	return
 }
 
