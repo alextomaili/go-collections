@@ -57,7 +57,7 @@ func bench(b *testing.B, maxKey, testThreadCount int, addGcPressure bool, worklo
 	wg.Wait()
 }
 
-func BenchmarkAsyncFactory(b *testing.B) {
+func BenchmarkCompactMap(b *testing.B) {
 	b.StopTimer()
 
 	//workload:
