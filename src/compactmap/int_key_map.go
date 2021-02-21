@@ -2,6 +2,13 @@ package compactmap
 
 import "unsafe"
 
+type flagType uint16
+
+const (
+	generationMask          = 0x7FFF
+	deletedFlag    flagType = 0x8000
+)
+
 const (
 	//hash table to store slots ---------------------
 	//we should protect system against to large array's allocation
@@ -21,21 +28,21 @@ const (
 )
 
 type (
-	KeyType  uint32
-	flagType uint16
+	KeyType uint32
 
 	IntKeyMap struct {
-		loadFactor float32
-		threshold  int
-		capacity   int
-		itemSize   int
-		dataSize   int
-		keySize    int
-		headerSize int
-		flagSize   int
-		data       []byte
-		itemsCount int
-		generation flagType
+		loadFactor          float32
+		threshold           int
+		capacity            int
+		itemSize            int
+		dataSize            int
+		keySize             int
+		headerSize          int
+		flagSize            int
+		data                []byte
+		liveItemsCount      int
+		allocatedItemsCount int
+		generation          flagType
 	}
 
 	MapValue interface {
@@ -82,8 +89,9 @@ func NewIntKeyMap(dataSize int, capacity int) *IntKeyMap {
 
 		dataSize: dataSize,
 
-		itemsCount: 0,
-		generation: 1,
+		liveItemsCount:      0,
+		allocatedItemsCount: 0,
+		generation:          1,
 	}
 
 	s.headerSize = s.keySize + s.flagSize
@@ -116,7 +124,9 @@ func (s *IntKeyMap) setFlag(index int, f flagType) {
 
 func (s *IntKeyMap) isEmptySlot(index int) bool {
 	f := s.flag(index)
-	return f != s.generation
+	deleted := f&deletedFlag > 0
+	generation := f & generationMask
+	return generation != s.generation && !deleted
 }
 
 func (s *IntKeyMap) pData(index int) unsafe.Pointer {
@@ -125,7 +135,8 @@ func (s *IntKeyMap) pData(index int) unsafe.Pointer {
 
 func (s *IntKeyMap) Clear() {
 	s.generation++
-	s.itemsCount = 0
+	s.liveItemsCount = 0
+	s.allocatedItemsCount = 0
 
 	//if wrap around - make new slice and start with gen == 1 again
 	if s.generation <= 0 {
@@ -140,13 +151,15 @@ func (s *IntKeyMap) findSlotByLinearProbing(key KeyType) (int, bool) {
 	index := hash(key, s.capacity) // compute hashcode
 
 	for i := 0; i < s.capacity; i++ {
+		deleted := s.flag(index)&deletedFlag > 0
+
 		if s.isEmptySlot(index) {
 			return index, false
 		}
 
 		k := s.key(index)
 		if k == key {
-			return index, true
+			return index, !deleted
 		}
 
 		//next probe
@@ -195,7 +208,7 @@ func (s *IntKeyMap) rehash(newCapacity int) {
 }
 
 func (s *IntKeyMap) findOrInsertSlot(key KeyType) (int, bool) {
-	if !s.ensureCapacity(s.itemsCount + 1) {
+	if !s.ensureCapacity(s.allocatedItemsCount + 1) {
 		panic("no more capacity")
 	}
 	i, found := s.findSlotByLinearProbing(key)
@@ -212,7 +225,8 @@ func (s *IntKeyMap) Put(key KeyType, value MapValue) {
 
 	index, found := s.findOrInsertSlot(key)
 	if !found {
-		s.itemsCount++
+		s.liveItemsCount++
+		s.allocatedItemsCount++
 		s.setKey(index, key)
 		s.setFlag(index, s.generation)
 	}
@@ -243,12 +257,12 @@ func (s *IntKeyMap) Del(key KeyType) bool {
 	}
 
 	s.setFlag(index, 0)
-	s.itemsCount--
+	s.liveItemsCount--
 	return true
 }
 
 func (s *IntKeyMap) Len() int {
-	return s.itemsCount
+	return s.liveItemsCount
 }
 
 func (s *IntKeyMap) VisitAll(visitor Visitor) {
