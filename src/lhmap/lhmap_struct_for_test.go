@@ -9,6 +9,12 @@ type (
 		c uint32
 	}
 
+	tstKeyK struct {
+		a uint32
+		b uint32
+		c uint32
+	}
+
 	tstStructA struct {
 		t   int64
 		x   int32
@@ -59,6 +65,30 @@ func (d *tstKeyA) Hash() int {
 
 func (d *tstKeyA) Equals(p unsafe.Pointer) bool {
 	x := tstKeyA{}
+	x.ReadFrom(p)
+	return *d == x
+}
+
+
+// key type for test collision resolution
+func (d *tstKeyK) Size() int {
+	return int(unsafe.Sizeof(tstKeyK{}))
+}
+
+func (d *tstKeyK) WriteTo(p unsafe.Pointer) {
+	*(*tstKeyK)(p) = *d
+}
+
+func (d *tstKeyK) ReadFrom(p unsafe.Pointer) {
+	*d = *(*tstKeyK)(p)
+}
+
+func (d *tstKeyK) Hash() int {
+	return 222
+}
+
+func (d *tstKeyK) Equals(p unsafe.Pointer) bool {
+	x := tstKeyK{}
 	x.ReadFrom(p)
 	return *d == x
 }
