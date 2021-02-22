@@ -1,6 +1,8 @@
 package lhmap
 
-import "unsafe"
+import (
+	"unsafe"
+)
 
 type flagType uint16
 
@@ -173,12 +175,12 @@ func (s *LhMap) findSlotByLinearProbing(key KeyType) (int, bool) {
 	for i := 0; i < s.capacity; i++ {
 		deleted := s.flag(index)&deletedFlag > 0
 
-		if s.isEmptySlot(index) {
+		if !deleted && s.isEmptySlot(index) {
 			return index, false
 		}
 
-		if key.Equals(s.pKey(index)) {
-			return index, !deleted
+		if !deleted && key.Equals(s.pKey(index)) {
+			return index, true
 		}
 
 		//next probe
@@ -310,9 +312,9 @@ func (s *LhMap) Visit(start, count int, visitor Visitor) (next int) {
 		}
 	}
 
-	if i < s.capacity-1 {
-		return i + 1
-	} else {
+	if i == s.capacity {
 		return 0
+	} else {
+		return i
 	}
 }

@@ -251,7 +251,7 @@ func TestPutDelVisit(t *testing.T) {
 		m.Put(data[i].key, &data[i].value)
 	}
 
-	vm := make(map[tstKeyA]struct{})
+	vm := make(map[tstKeyA]int)
 	for i, _ := range data {
 		k := data[i].key
 		if k.Hash()%2 == 0 {
@@ -260,7 +260,7 @@ func TestPutDelVisit(t *testing.T) {
 			}
 		} else {
 			tk := k.(*tstKeyA)
-			vm[*tk] = struct{}{}
+			vm[*tk] = i
 		}
 	}
 
@@ -277,6 +277,6 @@ func TestPutDelVisit(t *testing.T) {
 	}
 
 	if len(vm) > 0 {
-		t.Error(fmt.Sprintf("all key should be visited!"))
+		t.Error(fmt.Sprintf("all key should be visited! [%v]", vm))
 	}
 }

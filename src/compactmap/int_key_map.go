@@ -134,7 +134,7 @@ func (s *IntKeyMap) pData(index int) unsafe.Pointer {
 }
 
 func (s *IntKeyMap) Clear() {
-	s.generation++
+	s.generation = (s.generation + 1) & generationMask
 	s.liveItemsCount = 0
 	s.allocatedItemsCount = 0
 
@@ -153,13 +153,13 @@ func (s *IntKeyMap) findSlotByLinearProbing(key KeyType) (int, bool) {
 	for i := 0; i < s.capacity; i++ {
 		deleted := s.flag(index)&deletedFlag > 0
 
-		if s.isEmptySlot(index) {
+		if !deleted && s.isEmptySlot(index) {
 			return index, false
 		}
 
 		k := s.key(index)
-		if k == key {
-			return index, !deleted
+		if !deleted && k == key {
+			return index, true
 		}
 
 		//next probe
@@ -228,7 +228,7 @@ func (s *IntKeyMap) Put(key KeyType, value MapValue) {
 		s.liveItemsCount++
 		s.allocatedItemsCount++
 		s.setKey(index, key)
-		s.setFlag(index, s.generation)
+		s.setFlag(index, s.generation & ^deletedFlag)
 	}
 
 	p := s.pData(index)
@@ -256,7 +256,7 @@ func (s *IntKeyMap) Del(key KeyType) bool {
 		return false
 	}
 
-	s.setFlag(index, 0)
+	s.setFlag(index, s.flag(index)|deletedFlag)
 	s.liveItemsCount--
 	return true
 }
