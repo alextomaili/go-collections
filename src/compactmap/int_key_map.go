@@ -153,13 +153,13 @@ func (s *IntKeyMap) findSlotByLinearProbing(key KeyType) (int, bool) {
 	for i := 0; i < s.capacity; i++ {
 		deleted := s.flag(index)&deletedFlag > 0
 
-		if !deleted && s.isEmptySlot(index) {
+		if s.isEmptySlot(index) {
 			return index, false
 		}
 
 		k := s.key(index)
-		if !deleted && k == key {
-			return index, true
+		if k == key {
+			return index, !deleted
 		}
 
 		//next probe

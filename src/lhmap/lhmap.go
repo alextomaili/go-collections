@@ -175,12 +175,12 @@ func (s *LhMap) findSlotByLinearProbing(key KeyType) (int, bool) {
 	for i := 0; i < s.capacity; i++ {
 		deleted := s.flag(index)&deletedFlag > 0
 
-		if !deleted && s.isEmptySlot(index) {
+		if s.isEmptySlot(index) {
 			return index, false
 		}
 
-		if !deleted && key.Equals(s.pKey(index)) {
-			return index, true
+		if key.Equals(s.pKey(index)) {
+			return index, !deleted
 		}
 
 		//next probe
