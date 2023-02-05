@@ -67,7 +67,7 @@ func hash(h KeyType, tLen int) int {
 
 func capacityToPowerOf2(capacity int) int {
 	power := uint(initialCapacity)
-	for ; (1 << power) < capacity; {
+	for (1 << power) < capacity {
 		power++
 		if power > maxPower {
 			panic("max capacity reached")
@@ -233,6 +233,19 @@ func (s *IntKeyMap) Put(key KeyType, value MapValue) {
 
 	p := s.pData(index)
 	value.WriteTo(p)
+}
+
+func (s *IntKeyMap) UpsertAndReturnPointer(key KeyType) (unsafe.Pointer, bool) {
+	index, found := s.findOrInsertSlot(key)
+	if !found {
+		s.liveItemsCount++
+		s.allocatedItemsCount++
+		s.setKey(index, key)
+		s.setFlag(index, s.generation & ^deletedFlag)
+	}
+
+	p := s.pData(index)
+	return p, !found
 }
 
 func (s *IntKeyMap) Get(key KeyType, value MapValue) bool {

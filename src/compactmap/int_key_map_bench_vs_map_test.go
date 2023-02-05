@@ -20,25 +20,58 @@ func (d *counterType) ReadFrom(p unsafe.Pointer) {
 	*d = *(*counterType)(p)
 }
 
+func TestIntKeyMapWorksFine(t *testing.T) {
+	im := NewIntKeyMap(4, 100)
+	one := counterType(1)
+	for k := 0; k < 1000; k++ {
+		p, isNew := im.UpsertAndReturnPointer(KeyType(k % 10))
+		if isNew {
+			one.WriteTo(p)
+		} else {
+			*(*counterType)(p)++
+		}
+	}
+
+	m := make(map[KeyType]counterType)
+	for k := 0; k < 1000; k++ {
+		m[KeyType(k%10)]++
+	}
+
+	var ic counterType
+	for k := 0; k < 1000; k++ {
+		key := KeyType(k % 10)
+
+		has := im.Get(key, &ic)
+		if !has {
+			t.Error("no key")
+		}
+		if ic != m[key] {
+			t.Error("diff", ic, "/", m[key])
+		}
+	}
+}
+
 func BenchmarkIntKeyMapVsMap(b *testing.B) {
 	b.Run("IntKeyMap", func(b *testing.B) {
 		m := NewIntKeyMap(4, 100)
-
-		v := counterType(256)
+		one := counterType(1)
 		for i := 0; i < b.N; i++ {
 			for k := 0; k < 1000; k++ {
-				m.Put(KeyType(k%10), &v)
+				p, isNew := m.UpsertAndReturnPointer(KeyType(k % 10))
+				if isNew {
+					one.WriteTo(p)
+				} else {
+					*(*counterType)(p)++
+				}
 			}
 		}
 	})
 
 	b.Run("map[]", func(b *testing.B) {
 		m := make(map[KeyType]counterType)
-
-		v := counterType(256)
 		for i := 0; i < b.N; i++ {
 			for k := 0; k < 1000; k++ {
-				m[KeyType(k%10)] = v
+				m[KeyType(k%10)]++
 			}
 		}
 	})
