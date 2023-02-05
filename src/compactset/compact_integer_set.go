@@ -200,7 +200,7 @@ func (s *OABitmapIntegerSet) ensureCapacity(newCount int) bool {
 	return true
 }
 
-func (s *OABitmapIntegerSet) rehash(newCapacity int) {
+func (s *OABitmapIntegerSet) rehash1(newCapacity int) {
 	newTable := make([]slotKeyType, newCapacity)
 	newValueTable := make([]valueType, newCapacity)
 
@@ -218,6 +218,26 @@ func (s *OABitmapIntegerSet) rehash(newCapacity int) {
 	s.keys = newTable
 	s.values = newValueTable
 	s.threshold = calc_threshold(newCapacity, s.loadFactor)
+}
+
+func (s *OABitmapIntegerSet) rehash(newCapacity int) {
+	oldS := &OABitmapIntegerSet{}
+	*oldS = *s
+
+	s.capacity = newCapacity
+	s.keys = make([]slotKeyType, newCapacity)
+	s.values = make([]valueType, newCapacity)
+	s.threshold = calc_threshold(newCapacity, s.loadFactor)
+
+	for i := 0; i < oldS.capacity; i++ {
+		mK := oldS.keys[i]
+		mV := oldS.values[i]
+		if mK != emptyKey {
+			idx, _ := s.findSlotByLinearProbing(mK)
+			s.keys[idx] = mK
+			s.values[idx] = mV
+		}
+	}
 }
 
 func (s *OABitmapIntegerSet) findSlot(key slotKeyType) (int, bool) {

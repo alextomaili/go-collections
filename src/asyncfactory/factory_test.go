@@ -1,7 +1,7 @@
 package asyncfactory
 
 import (
-	"math/rand"
+	"github.com/alextomaili/go-collections/src/go_internals"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -88,7 +88,7 @@ func TestDoNotReturnSameObject(tst *testing.T) {
 func workloadA(m *tstStructMapWithIntKey, maxKey int) int64 {
 	t := time.Now().UnixNano()
 	for i := 0; i < maxKey; i++ {
-		k := rand.Int63n(int64(maxKey))
+		k := int64(t % int64(maxKey)) //rand.Int63n(int64(maxKey))
 		if v, f := (*m)[k]; f {
 			v.number++
 			t++
@@ -121,6 +121,7 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 	var c uint64 = 100
 	wg.Add(1)
 	go func() {
+		<-do
 		for i := 0; i < b.N*testThreadCount; i++ {
 			payload := make([]byte, b.N, b.N)
 			atomic.AddUint64(&c, uint64(len(payload)))
@@ -150,41 +151,59 @@ func bench(b *testing.B, maxKey, testThreadCount int, mp tstStructMapWithIntKeyP
 
 //GODEBUG=gctrace=1
 func BenchmarkAsyncFactory(b *testing.B) {
+	//var m = make([]byte, 1)
+
 	//workload:
 	maxMapKeys := 2000
-	testThreadCount := 256
+	testThreadCount := 1024
 
 	//factory:
 	factorySpinCount := 1000
-	factoryBufferSize := testThreadCount * 2
+	factoryBufferSize := testThreadCount * 5
 
 	var (
-		tstAllocCounter     uint64
-		tstSyncAllocCounter uint64
+		tstAsyncAllocCounter uint64
+		tstSyncAllocCounter  uint64
 	)
 
 	af := NewAsyncFactory(factoryBufferSize, factorySpinCount, func(async bool) unsafe.Pointer {
-		if !async {
+		if async {
+			atomic.AddUint64(&tstAsyncAllocCounter, 1)
+		} else {
 			atomic.AddUint64(&tstSyncAllocCounter, 1)
 		}
-		atomic.AddUint64(&tstAllocCounter, 1)
+
+		if !async {
+			go_internals.AssignGcAssistBytes(0xFFFFFFFFFFFFFF)
+		}
 		r := make(tstStructMapWithIntKey, maxMapKeys)
 		return unsafe.Pointer(&r)
 	})
 
-	b.Run("_std", func(b *testing.B) {
+	b.Run("std___________", func(b *testing.B) {
 		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
 			r := make(tstStructMapWithIntKey, maxMapKeys)
 			return &r
 		})
-
 	})
 
-	b.Run("async_alloc", func(b *testing.B) {
+	b.Run("std_no_assist_", func(b *testing.B) {
+		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
+			go_internals.AssignGcAssistBytes(0xFFFFFFFFFFFFFF)
+			r := make(tstStructMapWithIntKey, maxMapKeys)
+			return &r
+		})
+	})
+
+	b.Run("async_alloc___", func(b *testing.B) {
 		bench(b, maxMapKeys, testThreadCount, func() *tstStructMapWithIntKey {
 			p := af.Alloc()
 			return (*tstStructMapWithIntKey)(p)
 		})
-		b.Logf("passed, allocated: %v, sync_allocations: %v", tstAllocCounter, tstSyncAllocCounter)
+
+		b.StopTimer()
+		h := atomic.LoadUint64(&af.head)
+		t := atomic.LoadUint64(&af.tail)
+		b.Logf("passed, async_allocated: %v, sync_allocations: %v, h: %v, t: %v, d1: %v", tstAsyncAllocCounter, tstSyncAllocCounter, h, t, af.d1)
 	})
 }
