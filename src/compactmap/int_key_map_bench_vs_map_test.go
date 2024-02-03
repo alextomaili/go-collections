@@ -53,6 +53,7 @@ func TestIntKeyMapWorksFine(t *testing.T) {
 
 func BenchmarkIntKeyMapVsMap(b *testing.B) {
 	b.Run("IntKeyMap", func(b *testing.B) {
+		b.ReportAllocs()
 		m := NewIntKeyMap(4, 100)
 		one := counterType(1)
 		for i := 0; i < b.N; i++ {
@@ -68,6 +69,7 @@ func BenchmarkIntKeyMapVsMap(b *testing.B) {
 	})
 
 	b.Run("map[]", func(b *testing.B) {
+		b.ReportAllocs()
 		m := make(map[KeyType]counterType)
 		for i := 0; i < b.N; i++ {
 			for k := 0; k < 1000; k++ {
