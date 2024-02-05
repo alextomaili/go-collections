@@ -44,7 +44,7 @@ func benchSet(s int) ([]benchDataR, float64) {
 
 func BenchmarkLhMapVsMap(b *testing.B) {
 	b.StopTimer()
-	bs, cs := benchSet(4096)
+	bs, cs := benchSet(300000) // 300_000
 
 	b.Run("LhMap", func(b *testing.B) {
 		b.StopTimer()
